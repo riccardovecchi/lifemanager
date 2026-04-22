@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Life Manager</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 Life Manager</h1>
+            <div class="header-actions">
+                <button id="syncBtn" class="btn btn-secondary">
+                    <span class="icon">🔄</span> Sincronizza
+                </button>
+            </div>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="areas">📁 Aree</button>
+            <button class="tab-btn" data-tab="projects">📊 Progetti</button>
+            <button class="tab-btn" data-tab="tasks">✅ Task</button>
+            <button class="tab-btn" data-tab="notes">📝 Note</button>
+        </nav>
+
+        <main>
+            <!-- Sezione Aree -->
+            <section id="areas" class="tab-content active">
+                <div class="section-header">
+                    <h2>Aree di Vita</h2>
+                    <button class="btn btn-primary" id="addAreaBtn">+ Nuova Area</button>
+                </div>
+                <div id="areasList" class="items-grid"></div>
+            </section>
+
+            <!-- Sezione Progetti -->
+            <section id="projects" class="tab-content">
+                <div class="section-header">
+                    <h2>Progetti</h2>
+                    <button class="btn btn-primary" id="addProjectBtn">+ Nuovo Progetto</button>
+                </div>
+                <div class="filters">
+                    <select id="projectAreaFilter">
+                        <option value="">Tutte le aree</option>
+                    </select>
+                    <select id="projectStatusFilter">
+                        <option value="">Tutti gli stati</option>
+                        <option value="planning">Pianificazione</option>
+                        <option value="active">Attivo</option>
+                        <option value="paused">In pausa</option>
+                        <option value="completed">Completato</option>
+                    </select>
+                </div>
+                <div id="projectsList" class="items-list"></div>
+            </section>
+
+            <!-- Sezione Task -->
+            <section id="tasks" class="tab-content">
+                <div class="section-header">
+                    <h2>Task</h2>
+                    <button class="btn btn-primary" id="addTaskBtn">+ Nuovo Task</button>
+                </div>
+                <div class="filters">
+                    <select id="taskProjectFilter">
+                        <option value="">Tutti i progetti</option>
+                    </select>
+                    <select id="taskPriorityFilter">
+                        <option value="">Tutte le priorità</option>
+                        <option value="high">Alta</option>
+                        <option value="medium">Media</option>
+                        <option value="low">Bassa</option>
+                    </select>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="taskCompletedFilter">
+                        Mostra completati
+                    </label>
+                </div>
+                <div id="tasksList" class="items-list"></div>
+            </section>
+
+            <!-- Sezione Note -->
+            <section id="notes" class="tab-content">
+                <div class="section-header">
+                    <h2>Note</h2>
+                    <button class="btn btn-primary" id="addNoteBtn">+ Nuova Nota</button>
+                </div>
+                <div class="filters">
+                    <select id="noteLinkedFilter">
+                        <option value="">Tutti i collegamenti</option>
+                    </select>
+                    <input type="text" id="noteSearchInput" placeholder="🔍 Cerca nelle note...">
+                </div>
+                <div id="notesList" class="items-list"></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal generico -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
