@@ -9,29 +9,34 @@
 <body>
     <div class="container">
         <header>
-            <h1>🎯 Life Manager</h1>
+            <h1>Life Manager</h1>
             <div class="header-actions">
                 <button id="syncBtn" class="btn btn-secondary">
-                    <span class="icon">🔄</span> Sincronizza
+                    Sincronizza
                 </button>
             </div>
         </header>
 
         <nav class="tabs">
-            <button class="tab-btn active" data-tab="areas">📁 Aree</button>
-            <button class="tab-btn" data-tab="projects">📊 Progetti</button>
-            <button class="tab-btn" data-tab="tasks">✅ Task</button>
-            <button class="tab-btn" data-tab="notes">📝 Note</button>
+            <button class="tab-btn active" data-tab="areas">Aree</button>
+            <button class="tab-btn" data-tab="projects">Progetti</button>
+            <button class="tab-btn" data-tab="tasks">Task</button>
+            <button class="tab-btn" data-tab="notes">Note</button>
         </nav>
 
         <main>
             <!-- Sezione Aree -->
             <section id="areas" class="tab-content active">
-                <div class="section-header">
-                    <h2>Aree di Vita</h2>
-                    <button class="btn btn-primary" id="addAreaBtn">+ Nuova Area</button>
+                <div id="areasView">
+                    <div class="section-header">
+                        <h2>Aree di Vita</h2>
+                        <button class="btn btn-primary" id="addAreaBtn">+ Nuova Area</button>
+                    </div>
+                    <div id="areasList" class="items-grid"></div>
                 </div>
-                <div id="areasList" class="items-grid"></div>
+
+                <!-- Vista dettaglio area -->
+                <div id="areaDetailView" style="display: none;"></div>
             </section>
 
             <!-- Sezione Progetti -->
@@ -89,7 +94,7 @@
                     <select id="noteLinkedFilter">
                         <option value="">Tutti i collegamenti</option>
                     </select>
-                    <input type="text" id="noteSearchInput" placeholder="🔍 Cerca nelle note...">
+                    <input type="text" id="noteSearchInput" placeholder="Cerca nelle note...">
                 </div>
                 <div id="notesList" class="items-list"></div>
             </section>
