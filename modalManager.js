@@ -21,9 +21,6 @@ export class ModalManager {
         const area = areaId ? this.dataManager.getArea(areaId) : null;
         const isEdit = !!area;
 
-        const colors = ['#4a90e2', '#7b68ee', '#52c41a', '#faad14', '#f5222d', '#eb2f96', '#722ed1', '#13c2c2'];
-        const icons = ['💼', '🏠', '💪', '🎓', '💰', '❤️', '🎨', '🌱', '🚀', '⚡'];
-
         this.modalBody.innerHTML = `
             <h2>${isEdit ? 'Modifica Area' : 'Nuova Area'}</h2>
             <form id="areaForm">
@@ -37,42 +34,12 @@ export class ModalManager {
                     <textarea id="areaDescription">${area ? area.description : ''}</textarea>
                 </div>
 
-                <div class="form-group">
-                    <label>Icona</label>
-                    <div class="color-picker">
-                        ${icons.map(icon => `
-                            <div class="color-option ${area && area.icon === icon ? 'selected' : ''}" 
-                                 data-icon="${icon}" 
-                                 style="background: linear-gradient(135deg, #f5f7fa, #c3cfe2); font-size: 1.5rem; display: flex; align-items: center; justify-content: center;">
-                                ${icon}
-                            </div>
-                        `).join('')}
-                    </div>
-                    <input type="hidden" id="areaIcon" value="${area ? area.icon : icons[0]}">
-                </div>
-
-                <div class="form-group">
-                    <label>Colore</label>
-                    <div class="color-picker">
-                        ${colors.map(color => `
-                            <div class="color-option ${area && area.color === color ? 'selected' : ''}" 
-                                 data-color="${color}" 
-                                 style="background-color: ${color};">
-                            </div>
-                        `).join('')}
-                    </div>
-                    <input type="hidden" id="areaColor" value="${area ? area.color : colors[0]}">
-                </div>
-
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" id="cancelBtn">Annulla</button>
                     <button type="submit" class="btn btn-primary">${isEdit ? 'Salva' : 'Crea'}</button>
                 </div>
             </form>
         `;
-
-        this.setupColorPicker();
-        this.setupIconPicker();
 
         document.getElementById('cancelBtn').addEventListener('click', () => this.closeModal());
         document.getElementById('areaForm').addEventListener('submit', async (e) => {
@@ -87,8 +54,8 @@ export class ModalManager {
         const data = {
             name: document.getElementById('areaName').value,
             description: document.getElementById('areaDescription').value,
-            icon: document.getElementById('areaIcon').value,
-            color: document.getElementById('areaColor').value
+            icon: '',
+            color: '#2563eb'
         };
 
         if (areaId) {
@@ -99,6 +66,11 @@ export class ModalManager {
 
         this.closeModal();
         this.uiManager.renderAll();
+
+        // Se siamo nel dettaglio, aggiorna
+        if (this.uiManager.currentAreaDetail === areaId) {
+            this.uiManager.showAreaDetail(areaId);
+        }
     }
 
     // Modal Progetto
@@ -126,7 +98,7 @@ export class ModalManager {
                         <option value="">Seleziona un'area</option>
                         ${areas.map(area => `
                             <option value="${area.id}" ${project && project.areaId === area.id ? 'selected' : ''}>
-                                ${area.icon} ${area.name}
+                                ${area.name}
                             </option>
                         `).join('')}
                     </select>
@@ -186,6 +158,11 @@ export class ModalManager {
 
         this.closeModal();
         this.uiManager.renderAll();
+
+        // Se siamo nel dettaglio area, aggiorna
+        if (this.uiManager.currentAreaDetail) {
+            this.uiManager.showAreaDetail(this.uiManager.currentAreaDetail);
+        }
     }
 
     // Modal Task
@@ -222,9 +199,9 @@ export class ModalManager {
                 <div class="form-group">
                     <label>Priorità</label>
                     <select id="taskPriority">
-                        <option value="low" ${task && task.priority === 'low' ? 'selected' : ''}>🟢 Bassa</option>
-                        <option value="medium" ${task && task.priority === 'medium' ? 'selected' : ''}>🟡 Media</option>
-                        <option value="high" ${task && task.priority === 'high' ? 'selected' : ''}>🔴 Alta</option>
+                        <option value="low" ${task && task.priority === 'low' ? 'selected' : ''}>Bassa</option>
+                        <option value="medium" ${task && task.priority === 'medium' ? 'selected' : ''}>Media</option>
+                        <option value="high" ${task && task.priority === 'high' ? 'selected' : ''}>Alta</option>
                     </select>
                 </div>
 
@@ -266,6 +243,11 @@ export class ModalManager {
 
         this.closeModal();
         this.uiManager.renderAll();
+
+        // Se siamo nel dettaglio area, aggiorna
+        if (this.uiManager.currentAreaDetail) {
+            this.uiManager.showAreaDetail(this.uiManager.currentAreaDetail);
+        }
     }
 
     // Modal Nota
@@ -295,7 +277,7 @@ export class ModalManager {
                         <optgroup label="Aree">
                             ${areas.map(area => `
                                 <option value="area:${area.id}" ${note && note.linkedTo && note.linkedTo.type === 'area' && note.linkedTo.id === area.id ? 'selected' : ''}>
-                                    ${area.icon} ${area.name}
+                                    ${area.name}
                                 </option>
                             `).join('')}
                         </optgroup>
@@ -357,28 +339,11 @@ export class ModalManager {
 
         this.closeModal();
         this.uiManager.renderAll();
-    }
 
-    // Utility per color picker
-    setupColorPicker() {
-        document.querySelectorAll('[data-color]').forEach(option => {
-            option.addEventListener('click', (e) => {
-                document.querySelectorAll('[data-color]').forEach(o => o.classList.remove('selected'));
-                e.target.classList.add('selected');
-                document.getElementById('areaColor').value = e.target.dataset.color;
-            });
-        });
-    }
-
-    // Utility per icon picker
-    setupIconPicker() {
-        document.querySelectorAll('[data-icon]').forEach(option => {
-            option.addEventListener('click', (e) => {
-                document.querySelectorAll('[data-icon]').forEach(o => o.classList.remove('selected'));
-                e.currentTarget.classList.add('selected');
-                document.getElementById('areaIcon').value = e.currentTarget.dataset.icon;
-            });
-        });
+        // Se siamo nel dettaglio area, aggiorna
+        if (this.uiManager.currentAreaDetail) {
+            this.uiManager.showAreaDetail(this.uiManager.currentAreaDetail);
+        }
     }
 }
 
