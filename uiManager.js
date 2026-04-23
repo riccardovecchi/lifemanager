@@ -3,6 +3,7 @@ export class UIManager {
     constructor(dataManager) {
         this.dataManager = dataManager;
         this.currentAreaDetail = null;
+        this.currentProjectDetail = null;
     }
 
     renderAll() {
@@ -19,27 +20,30 @@ export class UIManager {
         const areas = this.dataManager.getAreas();
 
         if (areas.length === 0) {
-            container.innerHTML = this.getEmptyState('📁', 'Nessuna area creata', 'Crea la tua prima area di vita');
+            container.innerHTML = this.getEmptyState('◆', 'Nessuna area creata', 'Inizia creando la tua prima area di vita');
             return;
         }
 
         container.innerHTML = areas.map(area => {
             const projectCount = this.dataManager.getProjects({ areaId: area.id }).length;
+            const projects = this.dataManager.getProjects({ areaId: area.id });
+            const activeProjects = projects.filter(p => p.status === 'active').length;
 
             return `
                 <div class="card area-card" data-id="${area.id}">
                     <div class="card-header">
                         <div style="flex: 1;">
                             <div class="card-title">${this.escapeHtml(area.name)}</div>
-                            <div class="card-description">${this.escapeHtml(area.description || '')}</div>
+                            <div class="card-description">${this.escapeHtml(area.description || 'Nessuna descrizione')}</div>
                         </div>
                         <div class="card-actions">
-                            <button class="icon-btn edit-area" data-id="${area.id}" title="Modifica">✏️</button>
-                            <button class="icon-btn delete-area" data-id="${area.id}" title="Elimina">🗑️</button>
+                            <button class="icon-btn edit-area" data-id="${area.id}" title="Modifica">✎</button>
+                            <button class="icon-btn delete-area" data-id="${area.id}" title="Elimina">✕</button>
                         </div>
                     </div>
                     <div class="card-meta">
-                        <span class="badge badge-primary">${projectCount} ${projectCount === 1 ? 'progetto' : 'progetti'}</span>
+                        <span class="badge badge-primary">${projectCount} progetti</span>
+                        ${activeProjects > 0 ? `<span class="badge badge-success">${activeProjects} attivi</span>` : ''}
                     </div>
                 </div>
             `;
@@ -63,7 +67,7 @@ export class UIManager {
         document.querySelectorAll('.edit-area').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const id = e.target.dataset.id;
+                const id = e.target.closest('.icon-btn').dataset.id;
                 window.app.modalManager.openAreaModal(id);
             });
         });
@@ -71,7 +75,7 @@ export class UIManager {
         document.querySelectorAll('.delete-area').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                const id = e.target.dataset.id;
+                const id = e.target.closest('.icon-btn').dataset.id;
                 if (confirm('Eliminare questa area e tutti i progetti collegati?')) {
                     await this.dataManager.deleteArea(id);
                     this.renderAll();
@@ -109,17 +113,18 @@ export class UIManager {
         const totalTasks = allTasks.length;
         const completedTasks = allTasks.filter(t => t.completed).length;
         const activeProjects = projects.filter(p => p.status === 'active').length;
+        const completedProjects = projects.filter(p => p.status === 'completed').length;
 
         detailView.innerHTML = `
-            <a href="#" class="back-btn" id="backToAreas">← Torna alle aree</a>
+            <a href="#" class="back-btn" id="backToAreas">← Indietro</a>
 
             <div class="area-detail">
                 <div class="area-detail-header">
                     <div>
                         <div class="area-detail-title">${this.escapeHtml(area.name)}</div>
-                        <div class="area-detail-description">${this.escapeHtml(area.description || '')}</div>
+                        <div class="area-detail-description">${this.escapeHtml(area.description || 'Nessuna descrizione')}</div>
                     </div>
-                    <div class="card-actions">
+                    <div class="card-actions" style="opacity: 1;">
                         <button class="btn btn-secondary btn-small" id="editAreaDetail">Modifica</button>
                     </div>
                 </div>
@@ -138,7 +143,7 @@ export class UIManager {
                         <div class="stat-label">Task totali</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value">${completedTasks}</div>
+                        <div class="stat-value">${completedTasks}/${totalTasks}</div>
                         <div class="stat-label">Completati</div>
                     </div>
                 </div>
@@ -152,11 +157,14 @@ export class UIManager {
                                 const taskCount = this.dataManager.getTasks({ projectId: project.id }).length;
 
                                 return `
-                                    <div class="card">
+                                    <div class="card project-detail-card" data-id="${project.id}">
                                         <div class="card-header">
                                             <div style="flex: 1;">
                                                 <div class="card-title">${this.escapeHtml(project.name)}</div>
-                                                <div class="card-description">${this.escapeHtml(project.description || '')}</div>
+                                                <div class="card-description">${this.escapeHtml(project.description || 'Nessuna descrizione')}</div>
+                                            </div>
+                                            <div class="card-actions">
+                                                <button class="icon-btn edit-project-detail" data-id="${project.id}">✎</button>
                                             </div>
                                         </div>
                                         <div class="card-meta">
@@ -168,7 +176,7 @@ export class UIManager {
                                             <div class="progress-bar">
                                                 <div class="progress-fill" style="width: ${progress}%"></div>
                                             </div>
-                                            <div style="text-align: right; font-size: 0.8125rem; color: var(--text-secondary); margin-top: 8px;">
+                                            <div style="text-align: right; font-size: 0.75rem; color: var(--text-secondary); margin-top: 8px;">
                                                 ${progress}% completato
                                             </div>
                                         ` : ''}
@@ -183,7 +191,7 @@ export class UIManager {
                     <div class="area-detail-section">
                         <h3>Task recenti</h3>
                         <div class="items-list">
-                            ${allTasks.slice(0, 5).map(task => {
+                            ${allTasks.slice(0, 10).map(task => {
                                 const project = this.dataManager.getProject(task.projectId);
                                 const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !task.completed;
 
@@ -215,9 +223,16 @@ export class UIManager {
                         <h3>Note</h3>
                         <div class="items-list">
                             ${notes.map(note => `
-                                <div class="card">
-                                    <div class="card-title">${this.escapeHtml(note.title)}</div>
-                                    <div class="card-description">${this.escapeHtml(note.content.substring(0, 150))}${note.content.length > 150 ? '...' : ''}</div>
+                                <div class="card note-detail-card" data-id="${note.id}">
+                                    <div class="card-header">
+                                        <div style="flex: 1;">
+                                            <div class="card-title">${this.escapeHtml(note.title)}</div>
+                                            <div class="card-description">${this.escapeHtml(note.content.substring(0, 200))}${note.content.length > 200 ? '...' : ''}</div>
+                                        </div>
+                                        <div class="card-actions">
+                                            <button class="icon-btn edit-note-detail" data-id="${note.id}">✎</button>
+                                        </div>
+                                    </div>
                                     <div class="card-meta">
                                         ${note.tags && note.tags.length > 0 ? note.tags.map(tag => `<span class="badge badge-secondary">#${this.escapeHtml(tag)}</span>`).join('') : ''}
                                     </div>
@@ -237,6 +252,42 @@ export class UIManager {
 
         document.getElementById('editAreaDetail').addEventListener('click', () => {
             window.app.modalManager.openAreaModal(areaId);
+        });
+
+        // Click su progetti nel dettaglio
+        document.querySelectorAll('.project-detail-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.icon-btn')) return;
+                const id = card.dataset.id;
+                this.hideAreaDetail();
+                window.app.switchTab('projects');
+                setTimeout(() => this.showProjectDetail(id), 100);
+            });
+        });
+
+        document.querySelectorAll('.edit-project-detail').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = e.target.closest('.icon-btn').dataset.id;
+                window.app.modalManager.openProjectModal(id);
+            });
+        });
+
+        // Click su note nel dettaglio
+        document.querySelectorAll('.note-detail-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.icon-btn')) return;
+                const id = card.dataset.id;
+                window.app.modalManager.openNoteModal(id);
+            });
+        });
+
+        document.querySelectorAll('.edit-note-detail').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = e.target.closest('.icon-btn').dataset.id;
+                window.app.modalManager.openNoteModal(id);
+            });
         });
     }
 
@@ -258,7 +309,7 @@ export class UIManager {
         });
 
         if (projects.length === 0) {
-            container.innerHTML = this.getEmptyState('📊', 'Nessun progetto trovato', 'Crea il tuo primo progetto');
+            container.innerHTML = this.getEmptyState('◇', 'Nessun progetto trovato', 'Crea il tuo primo progetto');
             return;
         }
 
@@ -268,15 +319,15 @@ export class UIManager {
             const taskCount = this.dataManager.getTasks({ projectId: project.id }).length;
 
             return `
-                <div class="card" data-id="${project.id}">
+                <div class="card project-card" data-id="${project.id}">
                     <div class="card-header">
                         <div style="flex: 1;">
                             <div class="card-title">${this.escapeHtml(project.name)}</div>
-                            <div class="card-description">${this.escapeHtml(project.description || '')}</div>
+                            <div class="card-description">${this.escapeHtml(project.description || 'Nessuna descrizione')}</div>
                         </div>
                         <div class="card-actions">
-                            <button class="icon-btn edit-project" data-id="${project.id}" title="Modifica">✏️</button>
-                            <button class="icon-btn delete-project" data-id="${project.id}" title="Elimina">🗑️</button>
+                            <button class="icon-btn edit-project" data-id="${project.id}" title="Modifica">✎</button>
+                            <button class="icon-btn delete-project" data-id="${project.id}" title="Elimina">✕</button>
                         </div>
                     </div>
                     <div class="card-meta">
@@ -289,7 +340,7 @@ export class UIManager {
                         <div class="progress-bar">
                             <div class="progress-fill" style="width: ${progress}%"></div>
                         </div>
-                        <div style="text-align: right; font-size: 0.8125rem; color: var(--text-secondary); margin-top: 8px;">
+                        <div style="text-align: right; font-size: 0.75rem; color: var(--text-secondary); margin-top: 8px;">
                             ${progress}% completato
                         </div>
                     ` : ''}
@@ -301,10 +352,20 @@ export class UIManager {
     }
 
     attachProjectEventListeners() {
+        // Click sulla card per aprire il dettaglio
+        document.querySelectorAll('.project-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.icon-btn')) return;
+
+                const id = card.dataset.id;
+                this.showProjectDetail(id);
+            });
+        });
+
         document.querySelectorAll('.edit-project').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const id = e.target.dataset.id;
+                const id = e.target.closest('.icon-btn').dataset.id;
                 window.app.modalManager.openProjectModal(id);
             });
         });
@@ -312,13 +373,190 @@ export class UIManager {
         document.querySelectorAll('.delete-project').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                const id = e.target.dataset.id;
+                const id = e.target.closest('.icon-btn').dataset.id;
                 if (confirm('Eliminare questo progetto e tutti i task collegati?')) {
                     await this.dataManager.deleteProject(id);
                     this.renderAll();
                 }
             });
         });
+    }
+
+    // Mostra dettaglio progetto
+    showProjectDetail(projectId) {
+        const project = this.dataManager.getProject(projectId);
+        if (!project) return;
+
+        this.currentProjectDetail = projectId;
+
+        // Nascondi lista progetti
+        document.getElementById('projectsList').style.display = 'none';
+        document.querySelector('#projects .section-header').style.display = 'none';
+        document.querySelector('#projects .filters').style.display = 'none';
+
+        // Mostra dettaglio
+        const detailView = document.getElementById('projectDetailView');
+        detailView.style.display = 'block';
+
+        const area = this.dataManager.getArea(project.areaId);
+        const tasks = this.dataManager.getTasks({ projectId });
+        const completedTasks = tasks.filter(t => t.completed).length;
+        const progress = this.dataManager.getProjectProgress(projectId);
+        const notes = this.dataManager.getNotes().filter(n => 
+            n.linkedTo && n.linkedTo.type === 'project' && n.linkedTo.id === projectId
+        );
+
+        detailView.innerHTML = `
+            <a href="#" class="back-btn" id="backToProjects">← Indietro</a>
+
+            <div class="area-detail">
+                <div class="area-detail-header">
+                    <div>
+                        <div class="area-detail-title">${this.escapeHtml(project.name)}</div>
+                        <div class="area-detail-description">${this.escapeHtml(project.description || 'Nessuna descrizione')}</div>
+                    </div>
+                    <div class="card-actions" style="opacity: 1;">
+                        <button class="btn btn-secondary btn-small" id="editProjectDetail">Modifica</button>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">${tasks.length}</div>
+                        <div class="stat-label">Task totali</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${completedTasks}</div>
+                        <div class="stat-label">Completati</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${progress}%</div>
+                        <div class="stat-label">Progresso</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${this.getStatusLabel(project.status)}</div>
+                        <div class="stat-label">Stato</div>
+                    </div>
+                </div>
+
+                ${area ? `
+                    <div style="margin-bottom: 24px;">
+                        <span class="badge badge-primary" style="font-size: 0.875rem; padding: 6px 12px;">
+                            Area: ${this.escapeHtml(area.name)}
+                        </span>
+                    </div>
+                ` : ''}
+
+                ${tasks.length > 0 ? `
+                    <div class="area-detail-section">
+                        <h3>Task</h3>
+                        <div class="items-list">
+                            ${tasks.map(task => {
+                                const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !task.completed;
+
+                                return `
+                                    <div class="card ${task.completed ? 'task-completed' : ''}" data-id="${task.id}">
+                                        <div class="card-header">
+                                            <div style="display: flex; align-items: start; gap: 12px; flex: 1;">
+                                                <input type="checkbox" class="task-checkbox-detail" data-id="${task.id}" ${task.completed ? 'checked' : ''}>
+                                                <div style="flex: 1;">
+                                                    <div class="card-title">${this.escapeHtml(task.title)}</div>
+                                                    ${task.description ? `<div class="card-description">${this.escapeHtml(task.description)}</div>` : ''}
+                                                </div>
+                                            </div>
+                                            <div class="card-actions">
+                                                <button class="icon-btn edit-task-detail" data-id="${task.id}">✎</button>
+                                            </div>
+                                        </div>
+                                        <div class="card-meta">
+                                            <span class="badge priority-${task.priority}">${this.getPriorityLabel(task.priority)}</span>
+                                            ${task.dueDate ? `<span class="${isOverdue ? 'badge badge-danger' : ''}">${task.dueDate}</span>` : ''}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : '<div class="empty-state"><div class="empty-state-text">Nessun task in questo progetto</div></div>'}
+
+                ${notes.length > 0 ? `
+                    <div class="area-detail-section">
+                        <h3>Note</h3>
+                        <div class="items-list">
+                            ${notes.map(note => `
+                                <div class="card note-detail-card" data-id="${note.id}">
+                                    <div class="card-header">
+                                        <div style="flex: 1;">
+                                            <div class="card-title">${this.escapeHtml(note.title)}</div>
+                                            <div class="card-description">${this.escapeHtml(note.content.substring(0, 200))}${note.content.length > 200 ? '...' : ''}</div>
+                                        </div>
+                                        <div class="card-actions">
+                                            <button class="icon-btn edit-note-detail" data-id="${note.id}">✎</button>
+                                        </div>
+                                    </div>
+                                    <div class="card-meta">
+                                        ${note.tags && note.tags.length > 0 ? note.tags.map(tag => `<span class="badge badge-secondary">#${this.escapeHtml(tag)}</span>`).join('') : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+
+        // Event listeners
+        document.getElementById('backToProjects').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.hideProjectDetail();
+        });
+
+        document.getElementById('editProjectDetail').addEventListener('click', () => {
+            window.app.modalManager.openProjectModal(projectId);
+        });
+
+        // Task checkboxes
+        document.querySelectorAll('.task-checkbox-detail').forEach(checkbox => {
+            checkbox.addEventListener('change', async (e) => {
+                const id = e.target.dataset.id;
+                await this.dataManager.toggleTaskComplete(id);
+                this.showProjectDetail(projectId);
+                this.renderTasks();
+            });
+        });
+
+        document.querySelectorAll('.edit-task-detail').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = e.target.closest('.icon-btn').dataset.id;
+                window.app.modalManager.openTaskModal(id);
+            });
+        });
+
+        // Note clicks
+        document.querySelectorAll('.note-detail-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.icon-btn')) return;
+                const id = card.dataset.id;
+                window.app.modalManager.openNoteModal(id);
+            });
+        });
+
+        document.querySelectorAll('.edit-note-detail').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = e.target.closest('.icon-btn').dataset.id;
+                window.app.modalManager.openNoteModal(id);
+            });
+        });
+    }
+
+    hideProjectDetail() {
+        this.currentProjectDetail = null;
+        document.getElementById('projectsList').style.display = 'flex';
+        document.querySelector('#projects .section-header').style.display = 'flex';
+        document.querySelector('#projects .filters').style.display = 'flex';
+        document.getElementById('projectDetailView').style.display = 'none';
     }
 
     // Render Task
@@ -344,7 +582,7 @@ export class UIManager {
         });
 
         if (tasks.length === 0) {
-            container.innerHTML = this.getEmptyState('✅', 'Nessun task trovato', 'Crea il tuo primo task');
+            container.innerHTML = this.getEmptyState('□', 'Nessun task trovato', 'Crea il tuo primo task');
             return;
         }
 
@@ -353,7 +591,7 @@ export class UIManager {
             const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !task.completed;
 
             return `
-                <div class="card ${task.completed ? 'task-completed' : ''}" data-id="${task.id}">
+                <div class="card ${task.completed ? 'task-completed' : ''} task-card" data-id="${task.id}">
                     <div class="card-header">
                         <div style="display: flex; align-items: start; gap: 12px; flex: 1;">
                             <input type="checkbox" class="task-checkbox" data-id="${task.id}" ${task.completed ? 'checked' : ''}>
@@ -363,8 +601,8 @@ export class UIManager {
                             </div>
                         </div>
                         <div class="card-actions">
-                            <button class="icon-btn edit-task" data-id="${task.id}" title="Modifica">✏️</button>
-                            <button class="icon-btn delete-task" data-id="${task.id}" title="Elimina">🗑️</button>
+                            <button class="icon-btn edit-task" data-id="${task.id}" title="Modifica">✎</button>
+                            <button class="icon-btn delete-task" data-id="${task.id}" title="Elimina">✕</button>
                         </div>
                     </div>
                     <div class="card-meta">
@@ -380,6 +618,16 @@ export class UIManager {
     }
 
     attachTaskEventListeners() {
+        // Click sulla card per modificare
+        document.querySelectorAll('.task-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.icon-btn') || e.target.classList.contains('task-checkbox')) return;
+
+                const id = card.dataset.id;
+                window.app.modalManager.openTaskModal(id);
+            });
+        });
+
         document.querySelectorAll('.task-checkbox').forEach(checkbox => {
             checkbox.addEventListener('change', async (e) => {
                 e.stopPropagation();
@@ -388,9 +636,12 @@ export class UIManager {
                 this.renderTasks();
                 this.renderProjects();
 
-                // Aggiorna dettaglio area se aperto
+                // Aggiorna dettagli se aperti
                 if (this.currentAreaDetail) {
                     this.showAreaDetail(this.currentAreaDetail);
+                }
+                if (this.currentProjectDetail) {
+                    this.showProjectDetail(this.currentProjectDetail);
                 }
             });
         });
@@ -398,7 +649,7 @@ export class UIManager {
         document.querySelectorAll('.edit-task').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const id = e.target.dataset.id;
+                const id = e.target.closest('.icon-btn').dataset.id;
                 window.app.modalManager.openTaskModal(id);
             });
         });
@@ -406,7 +657,7 @@ export class UIManager {
         document.querySelectorAll('.delete-task').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                const id = e.target.dataset.id;
+                const id = e.target.closest('.icon-btn').dataset.id;
                 if (confirm('Eliminare questo task?')) {
                     await this.dataManager.deleteTask(id);
                     this.renderAll();
@@ -431,7 +682,7 @@ export class UIManager {
         }
 
         if (notes.length === 0) {
-            container.innerHTML = this.getEmptyState('📝', 'Nessuna nota trovata', 'Crea la tua prima nota');
+            container.innerHTML = this.getEmptyState('▫', 'Nessuna nota trovata', 'Crea la tua prima nota');
             return;
         }
 
@@ -448,21 +699,21 @@ export class UIManager {
             }
 
             return `
-                <div class="card" data-id="${note.id}">
+                <div class="card note-card" data-id="${note.id}">
                     <div class="card-header">
                         <div style="flex: 1;">
                             <div class="card-title">${this.escapeHtml(note.title)}</div>
-                            <div class="card-description">${this.escapeHtml(note.content.substring(0, 150))}${note.content.length > 150 ? '...' : ''}</div>
+                            <div class="card-description">${this.escapeHtml(note.content.substring(0, 200))}${note.content.length > 200 ? '...' : ''}</div>
                         </div>
                         <div class="card-actions">
-                            <button class="icon-btn edit-note" data-id="${note.id}" title="Modifica">✏️</button>
-                            <button class="icon-btn delete-note" data-id="${note.id}" title="Elimina">🗑️</button>
+                            <button class="icon-btn edit-note" data-id="${note.id}" title="Modifica">✎</button>
+                            <button class="icon-btn delete-note" data-id="${note.id}" title="Elimina">✕</button>
                         </div>
                     </div>
                     <div class="card-meta">
                         ${linkedInfo}
                         ${note.tags && note.tags.length > 0 ? note.tags.map(tag => `<span class="badge badge-secondary">#${this.escapeHtml(tag)}</span>`).join('') : ''}
-                        <span style="color: var(--text-secondary); font-size: 0.75rem;">${this.formatDate(note.createdAt)}</span>
+                        <span style="color: var(--text-muted); font-size: 0.7rem;">${this.formatDate(note.createdAt)}</span>
                     </div>
                 </div>
             `;
@@ -472,10 +723,20 @@ export class UIManager {
     }
 
     attachNoteEventListeners() {
+        // Click sulla card per modificare
+        document.querySelectorAll('.note-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.icon-btn')) return;
+
+                const id = card.dataset.id;
+                window.app.modalManager.openNoteModal(id);
+            });
+        });
+
         document.querySelectorAll('.edit-note').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const id = e.target.dataset.id;
+                const id = e.target.closest('.icon-btn').dataset.id;
                 window.app.modalManager.openNoteModal(id);
             });
         });
@@ -483,7 +744,7 @@ export class UIManager {
         document.querySelectorAll('.delete-note').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                const id = e.target.dataset.id;
+                const id = e.target.closest('.icon-btn').dataset.id;
                 if (confirm('Eliminare questa nota?')) {
                     await this.dataManager.deleteNote(id);
                     this.renderNotes();
@@ -519,7 +780,7 @@ export class UIManager {
             <div class="empty-state">
                 <div class="empty-state-icon">${icon}</div>
                 <div class="empty-state-text">${title}</div>
-                <div style="color: var(--text-secondary); margin-top: 8px; font-size: 0.875rem;">${subtitle}</div>
+                <div style="color: var(--text-muted); margin-top: 8px; font-size: 0.875rem;">${subtitle}</div>
             </div>
         `;
     }
@@ -536,21 +797,21 @@ export class UIManager {
 
     getStatusLabel(status) {
         const labels = {
-            planning: 'Pianificazione',
-            active: 'Attivo',
-            paused: 'In pausa',
-            completed: 'Completato'
+            planning: 'PLAN',
+            active: 'ACTIVE',
+            paused: 'PAUSED',
+            completed: 'DONE'
         };
-        return labels[status] || status;
+        return labels[status] || status.toUpperCase();
     }
 
     getPriorityLabel(priority) {
         const labels = {
-            high: 'Alta',
-            medium: 'Media',
-            low: 'Bassa'
+            high: 'HIGH',
+            medium: 'MED',
+            low: 'LOW'
         };
-        return labels[priority] || priority;
+        return labels[priority] || priority.toUpperCase();
     }
 
     formatDate(dateString) {
